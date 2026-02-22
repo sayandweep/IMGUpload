@@ -74,7 +74,7 @@ button:focus-visible {
 }
 
 input.uploadfile {
-  border: 2px dashed #646cff;
+  border: 2px dashed rgb(0, 149, 67);
   border-radius: 8px;
   padding: 1em;
   background-color: transparent;
@@ -86,7 +86,7 @@ input.uploadfile {
     width: 350px;
     height: 100px;
     background: #1c1c1c;
-    border: 2px dashed #646cff;
+    border: 2px dashed rgb(0, 149, 67);
     border-radius: 8px;
     cursor: pointer;
     display: flex;
@@ -96,4 +96,11 @@ input.uploadfile {
 
 #reset-btn {
     margin-top: 10px;
+}
+
+#copy-btn, #copy-btn:hover {
+  background: rgb(0, 149, 67);
+  transition: .2s;
+  border: none;
+  outline: none
 }

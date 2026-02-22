@@ -1,6 +1,6 @@
 import { useState, useRef, type ChangeEvent } from "react";
 import '../index.css'
-import axios from "axios";
+import {supabase} from '../supabase'
 
 
 
@@ -20,6 +20,9 @@ export default function FileUploader() {
 	const [status, setStatus] = useState<UploadingStatus>('idle');
 	const [uploadProgress, setUploadProgress] = useState(0);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [shareLink, setShareLink] = useState<string>('');
+	const [cWord, setCWord] = useState<string>('Copy Link');
+	const [color, setColor] = useState<string>('');
 
 
     function uploaderDiv() {
@@ -43,22 +46,54 @@ export default function FileUploader() {
 		formData.append('file', file);
 
 		try {
-            await axios.post('https://httpbin.org/post', formData, {
-				headers: {
-					'Content-Type': 'multipart/form-data',
-				},
 
-                onUploadProgress: (progressEvent) => {
-                    const prog = progressEvent.total ? Math.round((progressEvent.loaded * 100) / progressEvent.total) : 0;
-                    setUploadProgress(prog);
-                }
-			});
+			const fileExt = file.name.split('.').pop();
+			const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
+			const progressInterval = setInterval(() => {
+				setUploadProgress(prev => {
+					if (prev >= 90) {
+						clearInterval(progressInterval);
+						return 90;
+					}
+					return prev + 10;
+				});
+			}, 200);
+
+			// Upload to Supabase Storage
+			const { error } = await supabase.storage
+				.from('uploads')
+				.upload(fileName, file, {
+					cacheControl: '3600',
+					upsert: false
+				});
+
+			clearInterval(progressInterval);
+			setUploadProgress(100);
+
+			if (error) {
+				throw error;
+			}
+
+			// Get public URL
+			const { data: urlData } = supabase.storage
+				.from('uploads')
+				.getPublicUrl(fileName);
+
+			setShareLink(urlData.publicUrl);
 			setStatus('success');
+
+
 		} catch (error) {
 			console.error('Upload error:', error);
 			setStatus('error');
 		}
+	}
+
+	function copyToClipboard() {
+		navigator.clipboard.writeText(shareLink);
+		setCWord('Copied');
+		setColor('rgb(0, 106, 48)')
 	}
 
 	//return
@@ -82,17 +117,19 @@ export default function FileUploader() {
 			</div>
 		)}
 
+
+
 		{file && status === 'uploading' && <button disabled>{uploadProgress}%</button>}
 		{file && status === 'success' &&
         <div>
-            <button disabled>{uploadProgress}% Uploaded</button>
-            <button onClick={() => {setFile(null); setStatus('idle')}} style={{width: '100%'}} id='reset-btn'>Reset</button>
+            {/* <button onClick={() => {setFile(null); setStatus('idle')}} style={{width: '100%'}} id='reset-btn'>Reset</button> */}
+						<button onClick={copyToClipboard} style={{width: '100%', background: color}} id='copy-btn'>{cWord}</button>
         </div>
         }
 		{file && status === 'error' && <p>Upload failed. Please try again.</p>}
 
 		{file && status === 'idle' && <button onClick={uploadHandler}>Upload</button>}
-
+		
 		</div>
 	);
 }
